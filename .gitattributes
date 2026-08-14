@@ -1,0 +1,6 @@
+# Repository canonical text form is LF (matches harness/.gitattributes).
+* text=auto eol=lf
+
+*.exe binary
+*.png binary
+*.ico binary

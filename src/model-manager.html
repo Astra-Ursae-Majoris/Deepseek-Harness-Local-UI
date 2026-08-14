@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+<title>模型与 API 密钥管理</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", system-ui, sans-serif; background: #f5f6f8; color: #1a1a1a; padding: 16px; }
+  @media (prefers-color-scheme: dark) { body { background: #17181c; color: #e8e8ea; } }
+  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  h1 { font-size: 17px; }
+  .hint { font-size: 12px; color: #888; }
+  .notice { padding: 10px 14px; border-radius: 8px; background: #fdecea; color: #c0392b; font-size: 13px; margin-bottom: 12px; }
+  @media (prefers-color-scheme: dark) { .notice { background: #3a2424; color: #f0a9a1; } }
+  .card { background: #fff; border: 1px solid #e4e6eb; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  @media (prefers-color-scheme: dark) { .card { background: #22242a; border-color: #33363e; } }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .name { font-weight: 600; font-size: 14px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+  .badge.on { background: #e5f6ec; color: #1a7f43; }
+  .badge.off { background: #f2f3f5; color: #777; }
+  .badge.readonly { background: #fef3e2; color: #9a6b13; }
+  @media (prefers-color-scheme: dark) {
+    .badge.on { background: #1c3a29; color: #6fd49a; }
+    .badge.off { background: #2c2e34; color: #9a9aa2; }
+    .badge.readonly { background: #3a2f1c; color: #d9b46a; }
+  }
+  .ref { font-size: 11px; color: #999; font-family: Consolas, monospace; }
+  .keyline { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  input[type="password"] { flex: 1; min-width: 160px; padding: 8px 10px; border: 1px solid #d0d3da; border-radius: 8px; font-size: 13px; background: #fff; color: inherit; }
+  @media (prefers-color-scheme: dark) { input[type="password"] { background: #1b1d22; border-color: #3a3d45; } }
+  button { padding: 8px 14px; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; background: #416ecf; color: #fff; }
+  button:hover { background: #355bb5; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.ghost { background: #e8eaf0; color: #333; }
+  button.ghost:hover { background: #d9dce6; }
+  button.danger { background: #e5484d; }
+  button.danger:hover { background: #cf3a3f; }
+  @media (prefers-color-scheme: dark) {
+    button.ghost { background: #34363e; color: #ddd; }
+    button.ghost:hover { background: #3d4048; }
+  }
+  .msg { font-size: 12px; min-height: 16px; margin-top: 6px; color: #1a7f43; }
+  .msg.err { color: #c0392b; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid #bbb; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>模型与 API 密钥管理</h1>
+    <button id="refreshBtn">↻ 刷新</button>
+  </div>
+  <div class="hint">密钥保存在本机 DSH 配置中（.credentials.yaml），不会上传到任何地方。</div>
+  <div id="notice" class="notice" hidden>服务未运行，无法读取模型目录。请先启动服务。</div>
+  <div id="list"></div>
+  <script>
+    const $ = (id) => document.getElementById(id)
+
+    function badgeFor(p) {
+      if (!p.configured) return '<span class="badge off">未配置密钥</span>'
+      const source = { env: '环境变量', file: '配置文件', default: '默认' }[p.source] ?? p.source
+      return '<span class="badge on">已配置（' + source + '）</span>'
+    }
+
+    async function load() {
+      const list = $('list')
+      list.innerHTML = '<div class="hint">正在加载模型目录…</div>'
+      const status = await window.dshDesktop.status()
+      if (status.status !== 'running') {
+        $('notice').hidden = false
+        list.innerHTML = ''
+        return
+      }
+      $('notice').hidden = true
+      const result = await window.dshDesktop.models.list()
+      if (!result.ok) {
+        list.innerHTML = '<div class="notice">加载失败：' + (result.error?.message ?? '未知错误') + '</div>'
+        return
+      }
+      if (result.providers.length === 0) {
+        list.innerHTML = '<div class="hint">没有可配置的模型提供商。</div>'
+        return
+      }
+      list.innerHTML = ''
+      for (const p of result.providers) {
+        const card = document.createElement('div')
+        card.className = 'card'
+        const input = document.createElement('input')
+        input.type = 'password'
+        input.placeholder = '输入 API 密钥…（留空保存将清除）'
+        input.autocomplete = 'off'
+        const msg = document.createElement('div')
+        msg.className = 'msg'
+        const save = document.createElement('button')
+        save.textContent = '保存密钥'
+        const clear = document.createElement('button')
+        clear.className = 'ghost'
+        clear.textContent = '清除密钥'
+        const keyline = document.createElement('div')
+        keyline.className = 'keyline'
+        keyline.append(input, save)
+        card.innerHTML =
+          '<div class="row"><span class="name"></span><span class="badgeHost"></span>' + badgeFor(p) +
+          (p.active ? '' : '<span class="badge off">未启用</span>') +
+          (p.writable ? '' : '<span class="badge readonly">只读（环境变量提供）</span>') +
+          '</div><div class="ref">引用：' + p.keyRef + '</div>'
+        card.querySelector('.name').textContent = p.displayName
+        card.querySelector('.badgeHost').remove()
+        if (p.writable) {
+          keyline.appendChild(save)
+          keyline.appendChild(clear)
+          card.appendChild(keyline)
+          card.appendChild(msg)
+        } else {
+          const hint = document.createElement('div')
+          hint.className = 'msg'
+          hint.textContent = '该密钥由环境变量提供，应用内不可修改。'
+          card.appendChild(hint)
+        }
+        save.onclick = async () => {
+          const value = input.value.trim()
+          if (value === '') { msg.textContent = '请输入密钥内容。'; msg.className = 'msg err'; return }
+          save.disabled = true
+          save.innerHTML = '<span class="spin"></span> 保存中…'
+          const r = await window.dshDesktop.models.setKey(p.keyRef, value)
+          save.disabled = false
+          save.textContent = '保存密钥'
+          if (r.ok) {
+            msg.textContent = '已保存 ✓'
+            msg.className = 'msg'
+            input.value = ''
+            load()
+          } else {
+            msg.textContent = '保存失败：' + (r.error?.message ?? '未知错误')
+            msg.className = 'msg err'
+          }
+        }
+        clear.onclick = async () => {
+          clear.disabled = true
+          const r = await window.dshDesktop.models.unsetKey(p.keyRef)
+          clear.disabled = false
+          if (r.ok) {
+            msg.textContent = '已清除 ✓'
+            msg.className = 'msg'
+            load()
+          } else {
+            msg.textContent = '清除失败：' + (r.error?.message ?? '未知错误')
+            msg.className = 'msg err'
+          }
+        }
+        list.appendChild(card)
+      }
+    }
+
+    $('refreshBtn').onclick = () => { load() }
+    load()
+    // Auto-refresh when the server becomes available.
+    setInterval(async () => {
+      const status = await window.dshDesktop.status()
+      const noticeHidden = $('notice').hidden
+      if (status.status === 'running' && !noticeHidden) load()
+      if (status.status !== 'running' && !noticeHidden) load()
+    }, 3000)
+  </script>
+</body>
+</html>

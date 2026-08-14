@@ -1,0 +1,11 @@
+node_modules/
+dist/
+release/win-unpacked/
+release/*.blockmap
+release/*.nsis.7z
+release/builder-debug.yml
+release/.icon-ico/
+*.tsbuildinfo
+.DS_Store
+
+# 便携版 EXE（release/DSH-Desktop-*-portable.exe）会提交到仓库，供直接下载使用

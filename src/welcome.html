@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+<title>DeepSeek Harness 桌面版</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", system-ui, sans-serif;
+    background: #f5f6f8; color: #1a1a1a;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #17181c; color: #e8e8ea; }
+  }
+  .card {
+    width: min(420px, 88vw);
+    padding: 36px 32px;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    text-align: center;
+  }
+  @media (prefers-color-scheme: dark) {
+    .card { background: #22242a; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); }
+  }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  .sub { font-size: 13px; color: #777; margin-bottom: 24px; }
+  @media (prefers-color-scheme: dark) { .sub { color: #9a9aa2; } }
+  .status {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 15px; margin-bottom: 20px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #bbb; }
+  .dot.running { background: #22c55e; }
+  .dot.starting { background: #f59e0b; animation: pulse 1s infinite; }
+  .dot.stopped { background: #ef4444; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  .url { font-size: 12px; color: #888; margin-bottom: 24px; word-break: break-all; }
+  button {
+    display: block; width: 100%; margin-top: 10px; padding: 12px;
+    border: none; border-radius: 10px; font-size: 15px; cursor: pointer;
+    background: #416ecf; color: #fff;
+  }
+  button:hover { background: #355bb5; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.secondary { background: #e8eaf0; color: #333; }
+  button.secondary:hover { background: #d9dce6; }
+  @media (prefers-color-scheme: dark) {
+    button.secondary { background: #34363e; color: #ddd; }
+    button.secondary:hover { background: #3d4048; }
+  }
+  .link { background: none; border: none; color: #416ecf; font-size: 12px; margin-top: 14px; cursor: pointer; }
+  .msg { margin-top: 12px; font-size: 13px; color: #c0392b; min-height: 18px; }
+  .log { margin-top: 16px; font-size: 11px; color: #999; text-align: left; max-height: 120px; overflow-y: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>DeepSeek Harness 桌面版</h1>
+    <div class="sub">连接并管理本地 DSH 服务</div>
+    <div class="status">
+      <span class="dot" id="dot"></span>
+      <span id="statusText">正在检查服务…</span>
+    </div>
+    <div class="url" id="url"></div>
+    <button id="startBtn">🚀 启动服务</button>
+    <button id="stopBtn" class="secondary" hidden>⏹ 停止服务</button>
+    <button id="restartBtn" class="secondary" hidden>🔄 重启服务</button>
+    <button class="link" id="pickBtn">更改 DSH 安装位置…</button>
+    <div class="msg" id="msg"></div>
+    <div class="log" id="log" hidden></div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id)
+    let busy = false
+
+    function setStatus(status, text, url) {
+      $('dot').className = 'dot ' + status
+      $('statusText').textContent = text
+      $('url').textContent = url || ''
+      $('startBtn').hidden = status === 'starting'
+      $('stopBtn').hidden = status !== 'running'
+      $('restartBtn').hidden = status !== 'running'
+    }
+
+    function setMsg(text) { $('msg').textContent = text || '' }
+    function appendLog(line) {
+      const log = $('log')
+      log.hidden = false
+      log.textContent += line + '\n'
+      log.scrollTop = log.scrollHeight
+    }
+
+    async function refresh() {
+      const s = await window.dshDesktop.status()
+      const names = { stopped: '服务未运行', starting: '正在启动…', running: '服务运行中 ✅' }
+      setStatus(s.status, names[s.status] ?? s.status, s.url)
+      if (s.status === 'starting') setTimeout(refresh, 1000)
+    }
+
+    $('startBtn').onclick = async () => {
+      if (busy) return
+      busy = true
+      setMsg('')
+      const r = await window.dshDesktop.startServer()
+      if (!r.ok) setMsg(r.message || '启动失败')
+      busy = false
+      refresh()
+    }
+    $('stopBtn').onclick = async () => { await window.dshDesktop.stopServer(); refresh() }
+    $('restartBtn').onclick = async () => {
+      await window.dshDesktop.stopServer()
+      await new Promise(resolve => setTimeout(resolve, 500))
+      if (busy) return
+      busy = true
+      const r = await window.dshDesktop.startServer()
+      if (!r.ok) setMsg(r.message || '启动失败')
+      busy = false
+      refresh()
+    }
+    $('pickBtn').onclick = async () => {
+      const r = await window.dshDesktop.pickInstallDir()
+      if (!r.ok) setMsg(r.message || '目录无效')
+      refresh()
+    }
+    refresh()
+  </script>
+</body>
+</html>
