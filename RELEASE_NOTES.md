@@ -1,47 +1,36 @@
-# Release Notes — v0.3.0
+# Release Notes — v0.3.1
 
-**DeepSeek Harness 本地桌面版（Deepseek-Harness-Local-UI）v0.3.0**
+**DeepSeek Harness 本地桌面版（Deepseek-Harness-Local-UI）v0.3.1**
 
 ---
 
 ## 🎉 本版亮点
 
-新增 **Python 全量 UI 桌面版**（`desktop-py/dsh_app.py`）：用 Python 自绘的完整聊天应用，包含我们讨论过的全部功能——**对话大纲导航、回退到这一步、重新生成、流式回复、服务管家**，全部在一个原生窗口里，不依赖浏览器、不需要 Electron。
+**Python 完整版桌面应用**：Python 主程序 + 原生窗口加载**完整 DSH Web GUI**——界面效果与原版浏览器完全一致（Markdown 渲染、代码高亮、工具卡片、流式回复），并包含修改版的全部增强功能（**对话大纲导航、回退到这一步、重新生成**）。Python 负责服务管理、系统托盘、自动启动，PyInstaller 自编译 EXE 无 SmartScreen 拦截。
 
-## ✨ 全量 UI 桌面版功能
+## ✨ 功能
 
-- 💬 **完整聊天界面**：左侧会话列表 + 中间消息流 + 底部输入框（Enter 发送 / Shift+Enter 换行），回复流式打字机显示；
-- 🗂 **对话大纲导航栏**：右侧常驻目录，完整加载全部轮次（首句摘要），点击任意轮次定位消息 + 高亮，支持收起；
-- ↩️ **回退到这一步**：用户消息悬浮按钮，在该轮之前 fork 分支并打开子会话；
-- 🔄 **重新生成**：fork 后自动重发原消息；
-- 🚀 **服务管家**：顶栏一键 启动 / 停止 / 重启服务，实时状态 + 版本显示；
-- 📡 **实时事件流**：SSE 接收会话事件，流式回复实时刷新；
-- 🔨 **自编译 EXE**：`build_exe.bat` 选 3，在自己电脑上编译（约 48MB），**无 SmartScreen 拦截**。
+- 🖥 **原生窗口 + 完整 Web GUI**：三栏布局（工作区 / 聊天 / 对话大纲导航），与原版浏览器体验完全一致；
+- 🗂 **对话大纲导航**：完整加载全部轮次（首句摘要），点击定位 + 高亮，可收起；
+- ↩️ **回退到这一步 / 🔄 重新生成**：用户消息悬浮按钮，一键 fork 分支；
+- 🚀 **服务管家（Python 侧）**：自动检测 harness 并启动服务；
+- 🪟 **系统托盘常驻**：关窗不退出（隐藏到托盘），托盘菜单：显示窗口 / 启动服务 / 停止服务 / 退出；
+- 🔨 **自编译 EXE**：`build_exe.bat` 选 3（约 65MB），自己编译无 SmartScreen 拦截。
 
 ## 📦 使用方式
 
-### 方式一：Python 全量 UI（推荐）
-
 ```bash
 # 准备：Node.js ≥ 22.19 + pnpm ≥ 9 + Python ≥ 3.10
-cd harness && pnpm install        # DSH 依赖（一次）
+cd harness && pnpm install
 echo DEEPSEEK_API_KEY=你的密钥 > harness/.env
-pip install pywebview             # 一次
-python desktop-py/dsh_app.py      # 启动全量 UI 桌面版
+
+# 方式一：直接运行（Python）
+pip install pywebview pystray pillow
+python desktop-py/dsh_app.py
+
+# 方式二：自编译 EXE
+cd desktop-py && build_exe.bat   # 选 3 → dist/DSH-Desktop.exe
 ```
-
-### 方式二：自编译 EXE
-
-```bash
-cd desktop-py
-build_exe.bat   # 选 3 → dist/DSH-Desktop.exe（约 48MB，自己编译不被 SmartScreen 拦截）
-```
-
-### 方式三：轻量启动器 / WebView / Electron
-
-- `python desktop-py/dsh_launcher.py` — 零依赖轻量启动器（浏览器打开）；
-- `python desktop-py/dsh_webview.py` — WebView 窗口版；
-- Electron 桌面壳源码保留在 `src/`（可选，自行构建）。
 
 ## 🧩 与上游的关系
 
