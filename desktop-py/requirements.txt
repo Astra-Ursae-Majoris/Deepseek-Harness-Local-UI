@@ -1,0 +1,7 @@
+# 纯 Python 启动器：无任何第三方依赖（仅 Python 标准库 + tkinter）
+
+# WebView 窗口版（可选）：
+# pip install -r requirements-webview.txt
+
+pywebview>=5.0
+pyinstaller>=6.0

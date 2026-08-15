@@ -8,4 +8,11 @@ release/.icon-ico/
 *.tsbuildinfo
 .DS_Store
 
-# 便携版 EXE（release/DSH-Desktop-*-portable.exe）会提交到仓库，供直接下载使用
+# Python launcher build artifacts
+desktop-py/build/
+desktop-py/dist/
+desktop-py/*.spec
+__pycache__/
+*.pyc
+
+# The portable EXE is committed (release/DSH-Desktop-*-portable.exe) for direct download
