@@ -16,6 +16,7 @@
 - [快速开始](#-快速开始)
 - [Python 启动器使用指南](#-python-启动器使用指南)
 - [自编译 EXE（可选）](#-自编译-exe可选)
+- [WebView 窗口版（可选）](#-webview-窗口版可选)
 - [Electron 桌面壳（可选）](#-electron-桌面壳可选)
 - [修改版 Web GUI 增强](#-修改版-web-gui-增强)
 - [从源码构建（开发者）](#-从源码构建开发者)
@@ -90,24 +91,115 @@ DeepSeek Harness 的 Web GUI 在浏览器中使用，对日常使用有几个不
 
 ## 🚀 快速开始
 
-```bash
-# 1. 准备环境
-#    Node.js ≥ 22.19 + pnpm ≥ 9 + Python ≥ 3.10
+> 三种使用方式任选其一：**A. Python 启动器**（推荐，最简单）→ **B. 自编译 EXE** → **C. Electron 桌面壳**（体验最完整）。
 
-# 2. 安装 DSH 依赖（只需一次）
+### 第 0 步：准备环境（三种方式都需要，只需做一次）
+
+#### 0.1 安装 Node.js
+
+1. 打开 https://nodejs.org 下载 **LTS 版本**（≥ 22.19）的 Windows 安装包；
+2. 双击安装，一路下一步（**务必勾选** “Add to PATH”）；
+3. 安装完成后打开 PowerShell / CMD 验证：
+
+```powershell
+node --version   # 应输出 v22.x 或更高
+```
+
+#### 0.2 安装 pnpm
+
+```powershell
+npm install -g pnpm
+pnpm --version   # 应输出 9.x 或更高
+```
+
+#### 0.3 安装 DSH 源码依赖（只需一次，约 3-10 分钟）
+
+```powershell
+# 进入 harness 目录（DeepSeek Harness 官方源码修改版）
 cd harness
 pnpm install
-
-# 3. 配置 API 密钥（二选一）
-echo DEEPSEEK_API_KEY=你的密钥 > .env
-
-# 4. 启动服务 + 打开界面（两种方式任选）
 cd ..
-python desktop-py/dsh_launcher.py   # 推荐：图形界面，点「启动服务」+「打开界面」
-# 或不用启动器，直接命令行：
-# cd harness && pnpm dsh web --host 127.0.0.1 --port 3080
-# 然后浏览器访问 http://127.0.0.1:3080
 ```
+
+> ⚠️ 国内网络若安装缓慢或失败，可先设置镜像：`pnpm config set registry https://registry.npmmirror.com` 再重试。
+
+#### 0.4 配置 DeepSeek API 密钥
+
+在 `harness/` 目录下创建 `.env` 文件，内容：
+
+```bash
+DEEPSEEK_API_KEY=sk-你的密钥
+```
+
+> 密钥也可以稍后在 Python 启动器 / Electron 的「模型 / API 密钥管理」窗口中配置。密钥仅保存在本机，不会上传。
+
+---
+
+### 方式 A：Python 启动器（推荐 ⭐）
+
+**前置**：Python ≥ 3.10（下载 https://www.python.org/downloads/ ，安装时勾选 “Add to PATH”）。
+
+```powershell
+# 运行启动器（图形界面）
+python desktop-py/dsh_launcher.py
+```
+
+启动后：
+
+1. 点击 **「🚀 启动服务」** —— 自动检测 `harness/` 目录并启动 DSH 服务；
+2. 等待状态变为 **● 服务运行中**；
+3. 点击 **「🌐 打开界面」** —— 系统默认浏览器自动打开聊天界面。
+
+以后每次使用：双击运行启动器 → 启动服务 → 打开界面，三步搞定，**全程无需命令行**。
+
+> 💡 找不到 `harness/`？点「更改 DSH 目录…」手动选择源码目录（需包含 `apps/cli`）；或设置环境变量 `DSH_HOME` 指向它。
+
+---
+
+### 方式 B：自编译 EXE（不想装 Python 环境时）
+
+在自己电脑上把 Python 启动器编译成独立 EXE，**自己编译的 EXE 不会被 Windows SmartScreen 拦截**：
+
+```powershell
+cd desktop-py
+build_exe.bat
+# 按提示输入 1（纯 Python 版）或 2（WebView 窗口版）
+# 编译产物：desktop-py/dist/DSH-Desktop-Python.exe
+```
+
+编译完成后，双击 `dist/DSH-Desktop-Python.exe` 即可使用（首次编译约 1-2 分钟）。
+
+> 📦 若您不想自己编译、想直接下载现成 EXE，请前往仓库 **Releases** 页面（注意：下载的未签名 EXE 可能触发 SmartScreen，见 [FAQ](#-常见问题-faq)）。
+
+---
+
+### 方式 C：Electron 桌面壳（体验最完整，需要 Node.js）
+
+Electron 版提供**原生窗口**体验：右键手势、快捷键屏蔽、文件拖放、托盘常驻、模型/密钥管理窗口。
+
+```powershell
+# 安装依赖（只需一次）
+npm install
+
+# 编译 TypeScript + 复制静态资源
+npm run build
+
+# 启动桌面壳
+npm run start
+# 或直接：npx electron .
+```
+
+启动后：欢迎页点「🚀 启动服务」→ 自动进入聊天界面。
+
+#### 打包 Electron EXE（可选）
+
+```powershell
+npx electron-builder --win --publish never
+# 产物：release/DSH-Desktop-<版本>-portable.exe（便携版）和 -setup.exe（安装版）
+```
+
+> 🔐 **重要说明**：Electron EXE 若**对外分发**（下载给别人），需要**代码签名证书**（商业 CA 如 DigiCert / Sectigo，个人可申请 OV 证书）才能消除 SmartScreen「无法验证发布者」提示；**仅自己电脑使用**则不受影响。个人自用建议直接采用方式 A 或 B。
+
 
 ## 🐍 Python 启动器使用指南
 
@@ -137,20 +229,90 @@ build_exe.bat          # 按提示选择版本（1=纯 Python，2=WebView）
 ```
 
 **为什么自己编译不会被拦截？** SmartScreen 拦截的是“从网络下载 + 未签名”的组合。自己编译的 EXE 没有“来自网络”标记（Mark-of-the-Web），因此**不会**出现“无法验证发布者”的警告，双击即用。
+## 🌐 WebView 窗口版（可选）
 
-## 🖥 Electron 桌面壳（可选）
-
-仓库保留 Electron 桌面壳源码（`src/`、`scripts/`、`tests/`），如需使用：
+用 [pywebview](https://pywebview.flowrl.com/)（基于系统 WebView2）把 Web GUI 装进原生窗口，比纯 Python 启动器多一层桌面壳体验：
 
 ```bash
-npm install
-npm run build
-npm test
-npx electron .                    # 本地运行
-npx electron-builder --win --publish never   # 打包 EXE
+# 1. 安装依赖（只需一次）
+pip install pywebview
+
+# 2. 运行窗口版
+cd desktop-py
+python dsh_webview.py
 ```
 
-> ⚠️ 若要把 Electron EXE 分发给他人，需要**代码签名证书**（商业 CA 如 DigiCert / Sectigo，个人可申请 OV 证书）才能消除 SmartScreen 提示。个人自用场景建议直接用 Python 启动器 + 自编译。
+启动后会自动检测 DSH 目录并尝试启动服务，然后打开原生窗口加载 Web GUI。
+
+> 也可以随 `build_exe.bat` 选 2 编译为 EXE（已包含 pywebview 打包配置）。
+
+
+## 🖥 Electron 桌面壳（可选，完整保留）
+
+> 本仓库**完整保留 Electron 桌面壳**作为可选方案（`src/`、`scripts/`、`tests/`）。它提供比 Python 启动器更完整的桌面体验：**原生窗口、右键手势、快捷键屏蔽、文件拖放、托盘常驻、模型/API 密钥管理窗口**。
+
+### 功能对照
+
+| 能力 | Python 启动器 | WebView 窗口版 | Electron 桌面壳 |
+| --- | --- | --- | --- |
+| 服务管理（启动/停止/重启/状态） | ✅ | ✅ | ✅ |
+| 打开方式 | 系统浏览器 | 原生窗口 | 原生窗口 |
+| 右键手势（拖拽切换侧边栏） | ❌ | ❌ | ✅ |
+| 快捷键屏蔽（Ctrl+T/W 等） | ❌ | ❌ | ✅ |
+| 文件拖放获得真实路径 | ❌ | 部分 | ✅ |
+| 托盘常驻（关窗不停服务） | ❌ | ❌ | ✅ |
+| 模型/API 密钥管理窗口 | 环境变量 | 环境变量 | ✅ 内置窗口 |
+| 依赖 | Python 标准库 | Python + pywebview | Node.js + Electron |
+| SmartScreen 拦截（自编译/本地运行） | 无 | 无 | 无（自用）；分发需签名 |
+
+### 安装与运行
+
+```bash
+# 1. 安装依赖（只需一次）
+npm install
+
+# 2. 编译 TypeScript + 复制静态资源
+npm run build
+
+# 3. 运行单元测试（可选）
+npm test
+
+# 4. 启动桌面壳
+npm run start
+# 或直接：npx electron .
+```
+
+### 打包分发 EXE
+
+```bash
+npx electron-builder --win --publish never
+# 产物：
+#   release/DSH-Desktop-<版本>-portable.exe  便携版（免安装，双击即用）
+#   release/DSH-Desktop-<版本>-setup.exe     安装版（开始菜单快捷方式 + 卸载器）
+```
+
+> 国内网络打包建议先设置镜像环境变量：
+> `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`
+> `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`
+
+### Electron 版使用指南
+
+- **欢迎页与服务管理**：🚀 启动服务 / ⏹ 停止服务 / 🔄 重启服务 / 更改 DSH 安装位置，状态实时显示；
+- **手势**：按住鼠标右键左右拖动 = 收起/展开侧边栏；`Alt+← / Alt+→` 同效；
+- **快捷键**：`Ctrl+T / W / N / H / L / Tab / 数字键` 已被屏蔽，不会干扰输入；
+- **关闭窗口**：可选「同时停止服务并退出」「保持服务后台运行并退出（托盘驻留）」「取消」；
+- **模型/API 密钥**：菜单 → 模型/API 密钥管理（读取环境变量，应用不存储）。
+
+### ⚠️ 分发注意事项
+
+Electron EXE 若**仅自己电脑使用**（或通过 `npm run start` 运行），不会遇到拦截。若要把 EXE **下载分发给他人**，Windows SmartScreen 会提示「无法验证发布者」，需要：
+
+1. **商业代码签名证书**（推荐，个人可申请 OV 证书：DigiCert / Sectigo / Certum，年费约 ¥800–2000）；
+2. 或让用户右键 EXE → 属性 → 勾选「解除锁定」；
+3. 或提示用户点击「更多信息」→「仍要运行」。
+
+> 💡 **个人自用建议**：直接使用 Python 启动器（方式 A）或自编译 EXE（方式 B），无需处理签名问题。
+
 
 ## 🔍 修改版 Web GUI 增强
 
