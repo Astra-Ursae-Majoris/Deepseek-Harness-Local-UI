@@ -16,3 +16,4 @@ __pycache__/
 *.pyc
 
 # The portable EXE is committed (release/DSH-Desktop-*-portable.exe) for direct download
+desktop-py/dsh-service.log

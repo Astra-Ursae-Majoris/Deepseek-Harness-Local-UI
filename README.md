@@ -155,7 +155,7 @@ npm install -g pnpm
 pnpm --version   # 应输出 9.x 或更高
 ```
 
-#### 0.3 安装 DSH 源码依赖（只需一次，约 3-10 分钟）
+#### 0.3 安装 DSH 源码依赖（只需一次，约 3-10 分钟）**必须完成，否则服务无法启动**
 
 ```powershell
 # 进入 harness 目录（DeepSeek Harness 官方源码修改版）
@@ -164,7 +164,14 @@ pnpm install
 cd ..
 ```
 
-> ⚠️ 国内网络若安装缓慢或失败，可先设置镜像：`pnpm config set registry https://registry.npmmirror.com` 再重试。
+> ⚠️ **这一步决定成败**：服务启动需要 `harness/node_modules`（含 tsx 等依赖）。若 `pnpm install` 未成功，桌面应用会提示「harness 依赖未安装」。
+> 国内网络若安装缓慢或失败，可先设置镜像：`pnpm config set registry https://registry.npmmirror.com` 再重试。
+
+**验证依赖已装好**（应能看到 tsx 目录）：
+
+```powershell
+Test-Path harness\node_modules\tsx   # 返回 True 说明依赖就绪
+```
 
 #### 0.4 配置 DeepSeek API 密钥
 
@@ -455,6 +462,15 @@ Deepseek-Harness-Local-UI/
 
 **Q：双击 Electron EXE 时 Windows 提示「无法验证发布者 / 已保护你的电脑」？**
 A：这是 SmartScreen 对“从网络下载的未签名 EXE”的标准拦截。建议改用 **Python 启动器 + 自编译**（`desktop-py/build_exe.bat`）——自己编译的 EXE 不会触发该提示。若必须分发 Electron EXE，请申请商业代码签名证书（个人可申请 OV 证书，如 DigiCert / Sectigo / Certum）。
+
+
+**Q：点「启动服务」提示「harness 依赖未安装（缺少 tsx）」？**
+A：说明 `harness/` 目录的依赖没装成功。请打开命令行执行：
+```powershell
+cd harness
+pnpm install
+```
+国内网络慢可先 `pnpm config set registry https://registry.npmmirror.com` 再执行。完成后用 `Test-Path harness\node_modules\tsx` 验证（返回 True 即可）。
 
 **Q：Python 启动器需要装什么依赖？**
 A：纯 Python 版**零依赖**（标准库 + tkinter，Python 自带）。只有 WebView 窗口版需要 `pip install pywebview`。

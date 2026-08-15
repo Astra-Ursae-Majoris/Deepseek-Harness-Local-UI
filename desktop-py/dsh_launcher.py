@@ -101,32 +101,81 @@ def stop_service(port: int = DEFAULT_PORT) -> str:
         return f"停止失败：{e}"
 
 
+
+def _ensure_tsx(install_dir: Path) -> str | None:
+    """Return an error message when the harness checkout lacks the tsx dependency."""
+    node_modules_tsx = install_dir / "node_modules" / "tsx"
+    if node_modules_tsx.exists():
+        return None
+    return (
+        "harness 依赖未安装（缺少 tsx）。请先在命令行执行：\n"
+        f"  cd {install_dir}\n"
+        "  pnpm install\n"
+        "然后重试。国内网络慢可先执行：pnpm config set registry https://registry.npmmirror.com"
+    )
+
+
 def start_service(install_dir: Path, port: int = DEFAULT_PORT) -> str:
-    """Start the DSH web service detached, then wait until it answers."""
+    """Start the DSH web service detached, log to file, wait until it answers."""
     if is_service_running(port):
         return "服务已在运行"
+    missing = _ensure_tsx(install_dir)
+    if missing is not None:
+        return missing
     bin_path = install_dir / "apps" / "cli" / "src" / "bin.ts"
     if not bin_path.exists():
         return f"找不到 CLI 入口：{bin_path}"
+    # 服务日志落盘，便于诊断启动失败原因
+    log_path = Path(__file__).parent / "dsh-service.log"
+    try:
+        log_file = open(log_path, "a", encoding="utf-8", errors="replace")
+    except Exception:
+        log_file = None
     try:
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
         proc = subprocess.Popen(
             ["node", "--import", "tsx/esm", str(bin_path), "web", "--host", HOST, "--port", str(port)],
             cwd=str(install_dir),
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=log_file,
+            stderr=log_file,
             creationflags=creationflags,
             close_fds=True,
         )
-        # 等待服务就绪（最多 60 秒）
-        for _ in range(60):
+        # 等待服务就绪（最多 120 秒；首次启动需编译缓存）
+        for _ in range(120):
             time.sleep(1)
             if is_service_running(port):
+                if log_file is not None:
+                    log_file.close()
                 return f"服务已启动（PID {proc.pid}）"
-        return "服务进程已启动，但端口未就绪（可能缺少依赖，请检查 harness 是否已 pnpm install）"
+            # 进程已退出：立即诊断
+            if proc.poll() is not None:
+                tail = ""
+                if log_file is not None:
+                    log_file.flush()
+                    try:
+                        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        tail = "\n".join(lines[-15:])
+                    except Exception:
+                        tail = ""
+                    log_file.close()
+                return (
+                    f"服务启动失败：进程已退出（代码 {proc.returncode}）。\n"
+                    f"日志文件：{log_path}\n"
+                    f"日志尾部：\n{tail or '(无输出，请检查 node 是否在 PATH 中)'}\n"
+                )
+        if log_file is not None:
+            log_file.close()
+        return (
+            "服务进程已启动，但 120 秒内端口未就绪。\n"
+            f"请查看日志：{log_path}；常见原因：pnpm install 未完成、缺少 .env、端口被占用。"
+        )
     except Exception as e:
+        if log_file is not None:
+            log_file.close()
         return f"启动失败：{e}"
+
 
 
 def open_gui(port: int = DEFAULT_PORT) -> None:

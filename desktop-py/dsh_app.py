@@ -25,11 +25,10 @@ except ImportError:
     print("缺少 pywebview，请先运行：pip install pywebview")
     sys.exit(1)
 
-from dsh_api import ApiError, DshApi
-
 APP_NAME = "DeepSeek Harness 桌面版"
 DEFAULT_PORT = 3080
 HOST = "127.0.0.1"
+LOG_FILE = Path(__file__).parent / "dsh-service.log"
 
 
 def is_dsh_install_dir(d: Path) -> bool:
@@ -76,7 +75,7 @@ def find_port_pid(port: int) -> int | None:
 
 
 class ServiceManager:
-    """Start/stop/restart the local DSH web service."""
+    """Start/stop/restart the local DSH web service (logs to dsh-service.log)."""
 
     def __init__(self, port: int = DEFAULT_PORT) -> None:
         self.port = port
@@ -91,27 +90,76 @@ class ServiceManager:
             "pid": find_port_pid(self.port),
         }
 
+
+def _ensure_tsx(install_dir: Path) -> str | None:
+    """Return an error message when the harness checkout lacks the tsx dependency."""
+    node_modules_tsx = install_dir / "node_modules" / "tsx"
+    if node_modules_tsx.exists():
+        return None
+    return (
+        "harness 依赖未安装（缺少 tsx）。请先在命令行执行：\n"
+        f"  cd {install_dir}\n"
+        "  pnpm install\n"
+        "然后重试。国内网络慢可先执行：pnpm config set registry https://registry.npmmirror.com"
+    )
+
+
     def start(self) -> str:
         if is_running(self.port):
             return "服务已在运行"
         if self.install_dir is None or not is_dsh_install_dir(self.install_dir):
             return "未找到 DSH 目录（请设置 DSH_HOME 或把 harness/ 放到本目录同级）"
+        missing = _ensure_tsx(self.install_dir)
+        if missing is not None:
+            return missing
         bin_path = self.install_dir / "apps" / "cli" / "src" / "bin.ts"
+        try:
+            log_file = open(LOG_FILE, "a", encoding="utf-8", errors="replace")
+        except Exception:
+            log_file = None
         try:
             flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
             self.proc = subprocess.Popen(
                 ["node", "--import", "tsx/esm", str(bin_path), "web", "--host", HOST, "--port", str(self.port)],
                 cwd=str(self.install_dir),
-                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=log_file,
                 creationflags=flags, close_fds=True,
             )
-            for _ in range(60):
+            for _ in range(120):
                 time.sleep(1)
                 if is_running(self.port):
+                    if log_file is not None:
+                        log_file.close()
                     return f"服务已启动（PID {self.proc.pid}）"
-            return "服务进程已启动，但端口未就绪（请检查 harness 是否已 pnpm install）"
+                if self.proc.poll() is not None:
+                    tail = self._log_tail(log_file)
+                    return (
+                        f"服务启动失败：进程已退出（代码 {self.proc.returncode}）。"
+                        f"日志文件：{LOG_FILE}"
+                        f"日志尾部：\n{tail or '(无输出，请检查 node 是否在 PATH 中)'}"
+                    )
+            if log_file is not None:
+                log_file.close()
+            return (
+                "服务进程已启动，但 120 秒内端口未就绪。"
+                f"请查看日志：{LOG_FILE}；常见原因：pnpm install 未完成、缺少 .env、端口被占用。"
+            )
         except Exception as e:
+            if log_file is not None:
+                log_file.close()
             return f"启动失败：{e}"
+
+    @staticmethod
+    def _log_tail(log_file) -> str:
+        if log_file is not None:
+            log_file.flush()
+        try:
+            lines = LOG_FILE.read_text(encoding="utf-8", errors="replace").splitlines()
+            return "\n".join(lines[-15:])
+        except Exception:
+            return ""
 
     def stop(self) -> str:
         pid = find_port_pid(self.port)
@@ -148,9 +196,6 @@ def run_tray(manager: ServiceManager, on_show, on_quit):
         from pystray import Menu, MenuItem
     except ImportError:
         return
-
-    def refresh_menu(icon, item):
-        return True  # rebuild on click
 
     def start_svc(icon, item):
         icon.notify(manager.start(), APP_NAME)
@@ -191,8 +236,6 @@ def main() -> None:
         print("检测到 DSH 目录，正在自动启动服务…")
         print(manager.start())
 
-    # If the service is not running at all (no install dir found), show a message
-    # and keep the window open so the user can set DSH_HOME and retry.
     if not is_running(DEFAULT_PORT):
         print("⚠️ DSH 服务未运行。请设置 DSH_HOME 环境变量指向 harness/ 目录后重新启动。")
 
@@ -216,10 +259,8 @@ def main() -> None:
             pass
         webview._quit()
 
-    # Tray in background (service control without opening the window).
     threading.Thread(target=run_tray, args=(manager, show_window, quit_app), daemon=True).start()
 
-    # If the service is up, load the full Web GUI; otherwise a small retry page.
     url = f"http://{HOST}:{DEFAULT_PORT}/"
     window = webview.create_window(
         APP_NAME,
@@ -229,7 +270,6 @@ def main() -> None:
     )
 
     def on_closing():
-        # Closing the window hides to tray instead of quitting (unless quitting).
         if not state["quitting"]:
             try:
                 window.hide()
