@@ -1,6 +1,6 @@
 # DeepSeek Harness 本地桌面版（Deepseek-Harness-Local-UI）
 
-> **免命令行 · 一键管理 DeepSeek Harness 本地服务 · 支持 Python 自编译**
+> **免命令行 · 一键管理 DeepSeek Harness 本地服务 · 两种方案任选**
 
 基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（MIT 协议）的本地增强发行版：内置服务管家（启动 / 停止 / 重启 / 状态）、一键打开 GUI，并附带修改版 Web GUI 增强（对话大纲导航、回退到这一步、重新生成）。
 
@@ -8,16 +8,32 @@
 
 ---
 
+## 📦 选择你的版本（先看这里）
+
+本仓库提供**两套独立的桌面方案**，按需下载，互不影响：
+
+| | 🐍 **方案 A：Python 版（推荐）** | 🖥 **方案 B：Electron 版** |
+| --- | --- | --- |
+| **体积** | **小**（源码 ≈ 几 MB；自编译 EXE ≈ 65MB） | **大**（预编译 EXE ≈ 85MB） |
+| **下载方式** | ① 直接运行源码（pip 装依赖）② 或 `build_exe.bat` 自编译 | 直接下载 Release 里的现成 EXE |
+| **运行环境** | 需要 Python ≥ 3.10（轻量） | 免环境，双击即用 |
+| **界面** | 原生窗口加载完整 Web GUI（与原版一致 + 大纲导航/回退/重新生成） | 原生窗口 + 手势 + 快捷键屏蔽 + 托盘 + 文件拖放 |
+| **SmartScreen** | 自编译 EXE **不会**被拦截 | 下载的 EXE 首次运行可能提示（需签名/解除锁定） |
+| **适用人群** | 想要**小体积、无拦截**、愿意装 Python 的用户 | 想要**现成 EXE、手势/快捷键等完整桌面体验**的用户 |
+| **下载入口** | 👉 [README 方式 A / B / C](#-快速开始) | 👉 [Release v0.1.3](https://github.com/Astra-Ursae-Majoris/Deepseek-Harness-Local-UI/releases/tag/v0.1.3)（含 `DSH-Desktop-0.1.3-portable.exe`） |
+
+> 💡 **快速建议**：想省事 → 选 **Python 版**（源码几 MB，自己编译无拦截）；想免安装环境直接跑 → 选 **Electron 版**（下载 85MB EXE 双击即用，首次运行点「更多信息 → 仍要运行」即可）。
+
+---
+
 ## 📖 目录
 
+- [📦 选择你的版本（先看这里）](#-选择你的版本先看这里)
 - [为什么做这个](#-为什么做这个)
 - [功能特性](#-功能特性)
 - [系统要求](#-系统要求)
-- [快速开始](#-快速开始)
-- [Python 启动器使用指南](#-python-启动器使用指南)
-- [自编译 EXE（可选）](#-自编译-exe可选)
-- [WebView 窗口版（可选）](#-webview-窗口版可选)
-- [Electron 桌面壳（可选）](#-electron-桌面壳可选)
+- [快速开始（Python 版）](#-快速开始)
+- [Electron 版使用指南](#-electron-桌面壳可选完整保留)
 - [修改版 Web GUI 增强](#-修改版-web-gui-增强)
 - [从源码构建（开发者）](#-从源码构建开发者)
 - [项目结构](#-项目结构)
@@ -28,6 +44,7 @@
 - [致谢](#-致谢)
 
 ---
+
 
 ## 🤔 为什么做这个
 
@@ -91,20 +108,35 @@ DeepSeek Harness 的 Web GUI 在浏览器中使用，对日常使用有几个不
 
 ## 💻 系统要求
 
+### 🐍 Python 版
+
 | 项目 | 要求 | 说明 |
 | --- | --- | --- |
-| 操作系统 | Windows 10 / 11（x64） | Python 启动器也可在 macOS / Linux 运行（需有 tkinter） |
-| Python | ≥ 3.10 | 运行 Python 启动器（3.14 已测试） |
-| Node.js | ≥ 22.19（或 ≥ 24） | 运行 DSH 服务所需 |
+| 操作系统 | Windows 10 / 11（x64） | 完整版桌面应用（pywebview 需 WebView2，Win10/11 自带） |
+| Python | ≥ 3.10 | 完整版/启动器均需要（3.14 已测试） |
+| Node.js | ≥ 22.19（或 ≥ 24） | 运行 DSH 服务所需（后端，两种方案都需要） |
 | pnpm | ≥ 9 | 安装源码依赖 |
 | DeepSeek API Key | 需要 | 在 `.env` 或环境变量中配置 |
 | 磁盘空间 | ≥ 2 GB | 源码 + 依赖 + 会话数据 |
 
-## 🚀 快速开始
+### 🖥 Electron 版（Release v0.1.3）
 
-> 四种使用方式任选其一：**A. Python 全量 UI 桌面版**（推荐 ⭐，自绘聊天界面 + 大纲导航）→ **B. Python 轻量启动器** → **C. 自编译 EXE** → **D. Electron 桌面壳**。
+| 项目 | 要求 | 说明 |
+| --- | --- | --- |
+| 操作系统 | Windows 10 / 11（x64） | 仅 Windows |
+| Node.js | ≥ 22.19（或 ≥ 24） | 运行 DSH 服务所需（后端） |
+| pnpm | ≥ 9 | 安装源码依赖 |
+| DeepSeek API Key | 需要 | 在 `.env` 或环境变量中配置 |
+| 磁盘空间 | ≥ 2 GB | 源码 + 依赖 + 会话数据 |
 
-### 第 0 步：准备环境（所有方式都需要，只需做一次）
+> 注：两种方案共用同一个 DSH 后端（`harness/`），区别只在桌面壳实现（Python 小 / Electron 大）。
+
+## 🚀 快速开始（🐍 Python 版）
+
+> Python 版有三种用法任选：**A. 完整版桌面应用**（推荐 ⭐，原生窗口加载完整 Web GUI + 托盘）→ **B. 轻量启动器**（浏览器打开）→ **C. 自编译 EXE**（不装 Python 环境时用）。
+> 需要 Electron 版？直接下载 [Release v0.1.3](https://github.com/Astra-Ursae-Majoris/Deepseek-Harness-Local-UI/releases/tag/v0.1.3) 的现成 EXE，见 [Electron 版使用指南](#-electron-桌面壳可选完整保留)。
+
+### 第 0 步：准备环境（Python 版需要，只需做一次）
 
 #### 0.1 安装 Node.js
 
@@ -277,9 +309,16 @@ python dsh_webview.py
 > 也可以随 `build_exe.bat` 选 2 编译为 EXE（已包含 pywebview 打包配置）。
 
 
-## 🖥 Electron 桌面壳（可选，完整保留）
+## 🖥 Electron 桌面壳（可选 · 完整保留）
 
-> 本仓库**完整保留 Electron 桌面壳**作为可选方案（`src/`、`scripts/`、`tests/`）。它提供比 Python 启动器更完整的桌面体验：**原生窗口、右键手势、快捷键屏蔽、文件拖放、托盘常驻、模型/API 密钥管理窗口**。
+> 📥 **直接下载（免环境，双击即用）**：
+> **[Release v0.1.3](https://github.com/Astra-Ursae-Majoris/Deepseek-Harness-Local-UI/releases/tag/v0.1.3) → `DSH-Desktop-0.1.3-portable.exe`（便携版，约 85MB）**
+> 首次运行若提示「无法验证发布者」，点「更多信息 → 仍要运行」即可（未签名 EXE 的正常提示，不影响使用）。
+
+**为什么有 Electron 版？** 它提供比 Python 版更完整的桌面交互：**右键手势（按住右键左右拖动收起/展开侧边栏）、快捷键屏蔽（Ctrl+T/W 等不干扰输入）、文件拖放获得真实路径、托盘常驻、内置模型/API 密钥管理窗口**。代价是体积大（约 85MB）且分发需处理签名问题。
+
+> **与 Python 版的区别**：Python 版（方案 A）体积小、可自编译无拦截；Electron 版（本方案）体积大但交互最完整。两者共用同一个修改版 Web GUI（大纲导航、回退/重新生成等功能都有），按需选择即可。
+
 
 ### 功能对照
 
