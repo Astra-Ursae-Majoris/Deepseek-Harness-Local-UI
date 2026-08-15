@@ -46,22 +46,34 @@ DeepSeek Harness 的 Web GUI 在浏览器中使用，对日常使用有几个不
 
 ## ✨ 功能特性
 
-### Python 启动器（推荐，本仓库原创）
+### 🐍 Python 全量 UI 桌面版（推荐 ⭐，本仓库原创）
+
+用 **Python 自绘的完整桌面应用**（`desktop-py/dsh_app.py`），不依赖浏览器、不需要 Electron：
+
+- **完整聊天界面**：左侧会话列表 + 中间消息流 + 底部输入框（Enter 发送 / Shift+Enter 换行），支持流式打字机回复；
+- **对话大纲导航栏**：右侧常驻目录，完整加载全部轮次（首句摘要），点击任意轮次定位消息 + 高亮，可收起；
+- **回退到这一步 / 重新生成**：用户消息悬浮按钮，一键 fork 分支（可选自动重发）；
+- **服务管家**：顶部栏一键 启动 / 停止 / 重启服务，实时状态 + 版本显示；
+- **实时事件流**：通过 SSE 接收会话事件，流式回复实时刷新，新消息即时出现；
+- **自编译 EXE**：`build_exe.bat` 选 3，在自己电脑上编译为独立 EXE（约 48MB），**无 SmartScreen 拦截**；
+- 深色主题界面，中文文案，设置记忆。
+
+### Python 启动器（轻量版）
 
 - **纯 Python 实现**：仅用标准库 + tkinter，**零第三方依赖**，安装 Python 即可运行；
 - **一键服务管理**：启动 / 停止 / 重启 DSH 服务，实时状态显示（运行中 / 已停止）；
 - **一键打开界面**：自动打开系统默认浏览器访问 Web GUI；
 - **自动检测 DSH 目录**：`DSH_HOME` 环境变量 → 同级 `harness/` → 常见位置 → 手动选择（纯 UI）；
-- **自编译 EXE**：自带 `build_exe.bat`，用户可在**自己电脑**上用 PyInstaller 编译为 EXE——自编译产物没有“来自网络”标记，**不会触发 SmartScreen 拦截**；
 - 设置记忆（记住目录与端口），界面中文，简单直观。
 
 ### WebView 窗口版（可选）
 
-- 基于 [pywebview](https://pywebview.flowrl.com/)（系统 WebView2），把 Web GUI 装进原生窗口；
+- 基于 [pywebview](https://pywebview.flowrl.com/)（系统 WebView2），把 DSH 的 Web GUI 装进原生窗口；
 - 同样支持自编译 EXE；
 - 需要 `pip install pywebview`。
 
 ### Electron 桌面壳（可选，源码保留）
+
 
 - 原生窗口 + 右键手势 + 快捷键屏蔽 + 文件拖放 + 托盘常驻；
 - 源码在 `src/`，需要 Node.js 环境自行构建；
@@ -91,9 +103,9 @@ DeepSeek Harness 的 Web GUI 在浏览器中使用，对日常使用有几个不
 
 ## 🚀 快速开始
 
-> 三种使用方式任选其一：**A. Python 启动器**（推荐，最简单）→ **B. 自编译 EXE** → **C. Electron 桌面壳**（体验最完整）。
+> 四种使用方式任选其一：**A. Python 全量 UI 桌面版**（推荐 ⭐，自绘聊天界面 + 大纲导航）→ **B. Python 轻量启动器** → **C. 自编译 EXE** → **D. Electron 桌面壳**。
 
-### 第 0 步：准备环境（三种方式都需要，只需做一次）
+### 第 0 步：准备环境（所有方式都需要，只需做一次）
 
 #### 0.1 安装 Node.js
 
@@ -131,49 +143,69 @@ cd ..
 DEEPSEEK_API_KEY=sk-你的密钥
 ```
 
-> 密钥也可以稍后在 Python 启动器 / Electron 的「模型 / API 密钥管理」窗口中配置。密钥仅保存在本机，不会上传。
+> 密钥仅保存在本机，不会上传。
 
 ---
 
-### 方式 A：Python 启动器（推荐 ⭐）
+### 方式 A：Python 全量 UI 桌面版（推荐 ⭐）
+
+**自绘的完整聊天应用**：会话列表 + 消息流 + 流式回复 + 对话大纲导航 + 回退/重新生成 + 服务管家，全部在一个窗口里。
 
 **前置**：Python ≥ 3.10（下载 https://www.python.org/downloads/ ，安装时勾选 “Add to PATH”）。
 
 ```powershell
-# 运行启动器（图形界面）
-python desktop-py/dsh_launcher.py
+# 安装 pywebview（只需一次）
+pip install pywebview
+
+# 运行全量 UI 桌面版
+python desktop-py/dsh_app.py
 ```
 
-启动后：
+启动后自动检测 `harness/` 并启动服务，然后打开桌面窗口：
 
-1. 点击 **「🚀 启动服务」** —— 自动检测 `harness/` 目录并启动 DSH 服务；
-2. 等待状态变为 **● 服务运行中**；
-3. 点击 **「🌐 打开界面」** —— 系统默认浏览器自动打开聊天界面。
+1. **顶栏**：服务状态（● 运行中）+ 启动 / 停止 / 重启 / 新会话按钮；
+2. **左栏**：会话列表，点击切换会话；
+3. **中栏**：聊天区，输入消息回车发送，回复流式显示；
+4. **右栏**：对话大纲（全部轮次摘要），点击任意轮次定位消息；
+5. **用户消息悬浮**：「↩ 回退到这一步」「↻ 重新生成」。
 
-以后每次使用：双击运行启动器 → 启动服务 → 打开界面，三步搞定，**全程无需命令行**。
-
-> 💡 找不到 `harness/`？点「更改 DSH 目录…」手动选择源码目录（需包含 `apps/cli`）；或设置环境变量 `DSH_HOME` 指向它。
+> 💡 找不到 `harness/`？设置环境变量 `DSH_HOME` 指向源码目录，或把仓库解压后保持 `harness/` 与 `desktop-py/` 同级。
 
 ---
 
-### 方式 B：自编译 EXE（不想装 Python 环境时）
+### 方式 B：Python 轻量启动器
 
-在自己电脑上把 Python 启动器编译成独立 EXE，**自己编译的 EXE 不会被 Windows SmartScreen 拦截**：
+只想在浏览器里用 DSH？用零依赖的轻量启动器：
+
+```powershell
+python desktop-py/dsh_launcher.py
+# 点「🚀 启动服务」→「🌐 打开界面」，浏览器自动打开
+```
+
+---
+
+### 方式 C：自编译 EXE（不想装 Python 环境时）
+
+在自己电脑上把启动器编译成独立 EXE，**自己编译的 EXE 不会被 Windows SmartScreen 拦截**：
 
 ```powershell
 cd desktop-py
 build_exe.bat
-# 按提示输入 1（纯 Python 版）或 2（WebView 窗口版）
-# 编译产物：desktop-py/dist/DSH-Desktop-Python.exe
+# 按提示输入：
+#   1 - 纯 Python 启动器（tkinter，最小）
+#   2 - WebView 窗口版
+#   3 - 全量 UI 桌面版（推荐，约 48MB）
+# 编译产物：desktop-py/dist/ 目录下
 ```
 
-编译完成后，双击 `dist/DSH-Desktop-Python.exe` 即可使用（首次编译约 1-2 分钟）。
+编译完成后，双击 `dist/DSH-Desktop.exe`（模式 3）即可使用（首次编译约 1-2 分钟）。
 
 > 📦 若您不想自己编译、想直接下载现成 EXE，请前往仓库 **Releases** 页面（注意：下载的未签名 EXE 可能触发 SmartScreen，见 [FAQ](#-常见问题-faq)）。
 
 ---
 
-### 方式 C：Electron 桌面壳（体验最完整，需要 Node.js）
+### 方式 D：Electron 桌面壳（体验最完整，需要 Node.js）
+
 
 Electron 版提供**原生窗口**体验：右键手势、快捷键屏蔽、文件拖放、托盘常驻、模型/密钥管理窗口。
 
@@ -337,24 +369,29 @@ Electron EXE 若**仅自己电脑使用**（或通过 `npm run start` 运行）�
 
 完整保留官方开发流程：`pnpm install` → `pnpm run test` / `typecheck` / `build` 等，详见 `harness/README.md`。
 
-### Python 启动器
+### Python 客户端
 
 ```bash
 cd desktop-py
-python dsh_launcher.py      # 直接运行（无需安装任何第三方包）
-python -m py_compile dsh_launcher.py   # 语法检查
-build_exe.bat              # 编译为 EXE
+pip install pywebview        # 全量 UI 版需要（仅一次）
+python dsh_app.py           # 全量 UI 桌面版（推荐）
+python dsh_launcher.py      # 轻量启动器（零依赖）
+python -m py_compile dsh_app.py dsh_api.py dsh_launcher.py   # 语法检查
+build_exe.bat              # 编译为 EXE（1=轻量 / 2=WebView / 3=全量 UI）
 ```
 
 ## 📁 项目结构
 
 ```
 Deepseek-Harness-Local-UI/
-├── desktop-py/             # Python 启动器（推荐）
-│   ├── dsh_launcher.py     # 纯 Python 图形启动器（tkinter，零依赖）
+├── desktop-py/             # Python 客户端（推荐）
+│   ├── dsh_app.py          # ⭐ 全量 UI 桌面版（自绘聊天 + 大纲 + 服务管家）
+│   ├── dsh_api.py          # DSH 后端 HTTP/SSE API 客户端
+│   ├── dsh_ui/             # 自绘界面（index.html / style.css / app.js）
+│   ├── dsh_launcher.py     # 轻量启动器（tkinter，零依赖）
 │   ├── dsh_webview.py      # WebView 窗口版（pywebview，可选）
-│   ├── build_exe.bat       # 自编译 EXE 脚本（PyInstaller）
-│   └── requirements.txt    # WebView 版可选依赖
+│   ├── build_exe.bat       # 自编译 EXE 脚本（PyInstaller，三种模式）
+│   └── requirements.txt    # pywebview 等依赖
 ├── src/                    # Electron 桌面壳源码（可选方案）
 ├── scripts/                # Electron 构建辅助脚本
 ├── tests/                  # Electron 单元测试

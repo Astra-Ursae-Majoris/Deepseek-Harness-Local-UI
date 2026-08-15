@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DeepSeek Harness 桌面版</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 顶栏：服务状态 + 操作 -->
+  <header id="topbar">
+    <div class="brand">🦾 DeepSeek Harness</div>
+    <div id="svc-status" class="svc-stopped"><span class="dot"></span><span id="svc-text">服务已停止</span></div>
+    <div class="svc-actions">
+      <button id="btn-start" class="btn btn-green">🚀 启动服务</button>
+      <button id="btn-stop" class="btn btn-red">⏹ 停止</button>
+      <button id="btn-restart" class="btn">🔄 重启</button>
+      <button id="btn-new" class="btn btn-blue">➕ 新会话</button>
+    </div>
+  </header>
+
+  <main id="layout">
+    <!-- 左栏：会话列表 -->
+    <aside id="sidebar">
+      <div class="panel-title">会话</div>
+      <div id="session-list"></div>
+    </aside>
+
+    <!-- 中栏：聊天 -->
+    <section id="chat">
+      <div id="chat-title">选择或新建一个会话</div>
+      <div id="messages"></div>
+      <div id="composer">
+        <textarea id="input" rows="1" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+        <button id="btn-send" class="btn btn-blue">发送</button>
+      </div>
+    </section>
+
+    <!-- 右栏：对话大纲导航 -->
+    <aside id="outline">
+      <div class="panel-title">
+        <span>对话大纲</span>
+        <button id="btn-outline-toggle" class="icon-btn" title="收起目录栏">❮</button>
+      </div>
+      <div id="outline-list"></div>
+    </aside>
+  </main>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

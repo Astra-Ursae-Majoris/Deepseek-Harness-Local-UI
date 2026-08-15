@@ -1,7 +1,7 @@
-# 纯 Python 启动器：无任何第三方依赖（仅 Python 标准库 + tkinter）
-
-# WebView 窗口版（可选）：
-# pip install -r requirements-webview.txt
-
+# 全量 UI 桌面版（dsh_app.py）与 WebView 窗口版（dsh_webview.py）需要：
 pywebview>=5.0
+
+# 自编译 EXE 需要：
 pyinstaller>=6.0
+
+# 轻量启动器（dsh_launcher.py）零依赖，仅需 Python 标准库。
