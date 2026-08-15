@@ -20,8 +20,8 @@ if errorlevel 1 (
 python --version
 
 echo.
-echo [2/4] 安装 PyInstaller 与 pywebview...
-python -m pip install --upgrade pyinstaller pywebview
+echo [2/4] 安装 PyInstaller / pywebview / pystray...
+python -m pip install --upgrade pyinstaller pywebview pystray pillow
 if errorlevel 1 (
   echo   安装失败，请检查网络后重试
   pause
@@ -31,8 +31,8 @@ if errorlevel 1 (
 echo.
 echo [3/4] 请选择要编译的版本：
 echo   1 - 纯 Python 启动器（tkinter，零依赖，最小）
-echo   2 - WebView 窗口版（加载 DSH Web GUI）
-echo   3 - 全量 UI 桌面版（推荐：自绘聊天界面 + 大纲导航 + 服务管家）
+echo   2 - WebView 窗口版（加载 DSH Web GUI，简版）
+echo   3 - 完整版桌面应用（推荐：Web GUI 全功能 + 托盘 + 服务管家）
 set /p MODE=请输入 1 / 2 / 3（默认 3）: 
 if "%MODE%"=="1" (
   python -m PyInstaller --onefile --windowed --name DSH-Desktop-Python dsh_launcher.py
@@ -44,8 +44,8 @@ if "%MODE%"=="1" (
 ) else (
   python -m PyInstaller --onefile --windowed --name DSH-Desktop ^
     --collect-all webview --collect-all pywebview ^
+    --collect-all pystray --hidden-import PIL ^
     --add-data "%~dp0dsh_api.py;." ^
-    --add-data "%~dp0dsh_ui;dsh_ui" ^
     dsh_app.py
 )
 

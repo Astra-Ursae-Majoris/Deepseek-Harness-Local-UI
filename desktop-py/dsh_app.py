@@ -1,11 +1,10 @@
 """
-DeepSeek Harness 桌面版（Python 全量 UI）
+DeepSeek Harness 桌面版（Python 完整版）
 
-纯 Python 主程序 + 自绘 HTML UI（pywebview 渲染）:
-  - 服务管家：启动 / 停止 / 重启 / 状态
-  - 完整聊天界面：会话列表 + 消息流 + 流式回复 + 输入框
-  - 对话大纲导航栏：全部轮次摘要、点击定位、收起
-  - 回退到这一步 / 重新生成
+Python 主程序 + 原生窗口（pywebview），窗口内加载修改版 DSH Web GUI：
+  - UI 效果 = 完整 Web GUI（对话大纲导航、回退/重新生成、工具卡片、流式回复等全部功能）
+  - Python 负责：服务管家（启动/停止/重启/状态）、系统托盘、自动启动
+  - PyInstaller 自编译 EXE（无 SmartScreen 拦截）
 
 运行：python dsh_app.py
 自编译：build_exe.bat（选择模式 3）
@@ -26,7 +25,7 @@ except ImportError:
     print("缺少 pywebview，请先运行：pip install pywebview")
     sys.exit(1)
 
-from dsh_api import ApiError, DshApi, DshSseClient
+from dsh_api import ApiError, DshApi
 
 APP_NAME = "DeepSeek Harness 桌面版"
 DEFAULT_PORT = 3080
@@ -132,132 +131,114 @@ class ServiceManager:
         return "；".join(msgs)
 
 
-class Bridge:
-    """API surface exposed to the UI via pywebview js_api."""
+def make_tray_icon():
+    """Generate a simple tray icon with Pillow (no external image assets needed)."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([6, 6, 58, 58], radius=12, fill=(79, 140, 255, 255))
+    d.text((16, 18), "DSH", fill=(255, 255, 255, 255))
+    return img
 
-    def __init__(self, port: int = DEFAULT_PORT) -> None:
-        self.port = port
-        self.api = DshApi(port=port)
-        self.manager = ServiceManager(port)
-        self.sse = DshSseClient(port=port)
-        self._sse_thread: threading.Thread | None = None
-        self._window = None
 
-    def bind_window(self, window) -> None:
-        self._window = window
+def run_tray(manager: ServiceManager, on_show, on_quit):
+    """Tray loop (pystray) in its own thread."""
+    try:
+        import pystray
+        from pystray import Menu, MenuItem
+    except ImportError:
+        return
 
-    # ---- service ----
+    def refresh_menu(icon, item):
+        return True  # rebuild on click
 
-    def status(self) -> dict:
-        s = self.manager.status()
-        if s["running"]:
-            try:
-                desc = self.api.describe()
-                s["version"] = desc.get("version", "")
-            except ApiError:
-                pass
-        return s
+    def start_svc(icon, item):
+        icon.notify(manager.start(), APP_NAME)
+        time.sleep(0.5)
+        icon.update_menu()
 
-    def start_service(self) -> str:
-        msg = self.manager.start()
-        self._start_sse()
-        return msg
+    def stop_svc(icon, item):
+        icon.notify(manager.stop(), APP_NAME)
+        icon.update_menu()
 
-    def stop_service(self) -> str:
-        return self.manager.stop()
+    def show_win(icon, item):
+        on_show()
 
-    def restart_service(self) -> str:
-        msg = self.manager.restart()
-        self._start_sse()
-        return msg
+    def quit_app(icon, item):
+        on_quit()
 
-    # ---- sessions ----
-
-    def list_sessions(self) -> list:
-        try:
-            return self.api.list_sessions()
-        except ApiError:
-            return []
-
-    def create_session(self) -> str:
-        return self.api.create_session()
-
-    def get_history(self, session_id: str, before_seq=None) -> dict:
-        try:
-            return self.api.history(session_id, before_seq, 200)
-        except ApiError as e:
-            return {"error": str(e), "events": []}
-
-    def get_outline(self, session_id: str) -> list:
-        try:
-            return self.api.outline(session_id)
-        except ApiError:
-            return []
-
-    def send_prompt(self, session_id: str, text: str) -> dict:
-        try:
-            self.api.prompt(session_id, text, "queue")
-            return {"ok": True}
-        except ApiError as e:
-            return {"ok": False, "error": str(e)}
-
-    def fork_at(self, session_id: str, at_seq: int, text=None) -> dict:
-        """回退到这一步（或重新生成）: fork 到 atSeq，可选自动重发 text。"""
-        try:
-            child = self.api.fork(session_id, at_seq)
-            if text is not None:
-                self.api.prompt(child, text, "queue")
-            return {"ok": True, "sessionId": child}
-        except ApiError as e:
-            return {"ok": False, "error": str(e)}
-
-    def cancel(self, session_id: str) -> dict:
-        try:
-            self.api.cancel(session_id)
-            return {"ok": True}
-        except ApiError as e:
-            return {"ok": False, "error": str(e)}
-
-    # ---- sse ----
-
-    def _start_sse(self) -> None:
-        if self._sse_thread is not None and self._sse_thread.is_alive():
-            return
-        self._sse_thread = threading.Thread(target=self._sse_loop, daemon=True)
-        self._sse_thread.start()
-
-    def _sse_loop(self) -> None:
-        self.sse.run(self._on_frame)
-
-    def _on_frame(self, frame: dict) -> None:
-        """Forward live frames to the UI (session events only)."""
-        method = frame.get("method")
-        if method in ("session/event", "session/status", "session/title"):
-            try:
-                self._window.evaluate_js(f"window.__dshOnFrame({json.dumps(frame)})")
-            except Exception:
-                pass
+    icon = pystray.Icon(
+        "dsh-desktop",
+        make_tray_icon(),
+        APP_NAME,
+        Menu(
+            MenuItem("显示窗口", show_win, default=True),
+            Menu.SEPARATOR,
+            MenuItem("启动服务", start_svc),
+            MenuItem("停止服务", stop_svc),
+            Menu.SEPARATOR,
+            MenuItem("退出", quit_app),
+        ),
+    )
+    icon.run()
 
 
 def main() -> None:
-    bridge = Bridge()
-    if bridge.manager.install_dir is not None and not is_running(DEFAULT_PORT):
+    manager = ServiceManager()
+
+    # Auto-start the service when an install dir exists and nothing is running.
+    if manager.install_dir is not None and not is_running(DEFAULT_PORT):
         print("检测到 DSH 目录，正在自动启动服务…")
-        print(bridge.manager.start())
-    base = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
-    ui_dir = base / "dsh_ui"
-    index = ui_dir / "index.html"
-    if not index.exists():
-        print(f"缺少 UI 文件：{index}")
-        sys.exit(1)
+        print(manager.start())
+
+    # If the service is not running at all (no install dir found), show a message
+    # and keep the window open so the user can set DSH_HOME and retry.
+    if not is_running(DEFAULT_PORT):
+        print("⚠️ DSH 服务未运行。请设置 DSH_HOME 环境变量指向 harness/ 目录后重新启动。")
+
+    state = {"quitting": False}
+
+    def show_window():
+        try:
+            for w in webview.windows:
+                w.show()
+                w.restore()
+                w.focus()
+        except Exception:
+            pass
+
+    def quit_app():
+        state["quitting"] = True
+        try:
+            for w in webview.windows:
+                w.destroy()
+        except Exception:
+            pass
+        webview._quit()
+
+    # Tray in background (service control without opening the window).
+    threading.Thread(target=run_tray, args=(manager, show_window, quit_app), daemon=True).start()
+
+    # If the service is up, load the full Web GUI; otherwise a small retry page.
+    url = f"http://{HOST}:{DEFAULT_PORT}/"
     window = webview.create_window(
-        APP_NAME, str(index.resolve()),
-        width=1360, height=860, min_size=(980, 640),
-        js_api=bridge,
+        APP_NAME,
+        url,
+        width=1380, height=880, min_size=(1000, 660),
         background_color="#1a1d24",
     )
-    bridge.bind_window(window)
-    bridge._start_sse()
+
+    def on_closing():
+        # Closing the window hides to tray instead of quitting (unless quitting).
+        if not state["quitting"]:
+            try:
+                window.hide()
+                return False
+            except Exception:
+                return False
+        return True
+
+    window.events.closing += on_closing
     webview.start()
 
 
