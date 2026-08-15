@@ -91,17 +91,29 @@ class ServiceManager:
         }
 
 
-def _ensure_tsx(install_dir: Path) -> str | None:
-    """Return an error message when the harness checkout lacks the tsx dependency."""
+def _ensure_built(install_dir: Path) -> str | None:
+    """Return an error message when the harness checkout is not ready to run.
+
+    Checks both the runtime dependency (tsx) and the build artifacts the Web
+    GUI needs (apps/web/dist + client bundles). Mirrors the official flow
+    pnpm install -> pnpm run build -> pnpm dsh web.
+    """
     node_modules_tsx = install_dir / "node_modules" / "tsx"
-    if node_modules_tsx.exists():
-        return None
-    return (
-        "harness 依赖未安装（缺少 tsx）。请先在命令行执行：\n"
-        f"  cd {install_dir}\n"
-        "  pnpm install\n"
-        "然后重试。国内网络慢可先执行：pnpm config set registry https://registry.npmmirror.com"
-    )
+    if not node_modules_tsx.exists():
+        return (
+            "harness 依赖未安装（缺少 tsx）。请先在命令行执行：\n"
+            f"  cd {install_dir}\n"
+            "  pnpm install\n"
+            "然后重试。国内网络慢可先执行：pnpm config set registry https://registry.npmmirror.com"
+        )
+    if not (install_dir / "apps" / "web" / "dist").exists():
+        return (
+            "harness 尚未构建（缺少前端产物 apps/web/dist）。请先在命令行执行：\n"
+            f"  cd {install_dir}\n"
+            "  pnpm run build\n"
+            "然后重试。这是官方标准流程的一部分（pnpm install → pnpm run build → pnpm dsh web）。"
+        )
+    return None
 
 
     def start(self) -> str:
@@ -109,7 +121,7 @@ def _ensure_tsx(install_dir: Path) -> str | None:
             return "服务已在运行"
         if self.install_dir is None or not is_dsh_install_dir(self.install_dir):
             return "未找到 DSH 目录（请设置 DSH_HOME 或把 harness/ 放到本目录同级）"
-        missing = _ensure_tsx(self.install_dir)
+        missing = _ensure_built(self.install_dir)
         if missing is not None:
             return missing
         bin_path = self.install_dir / "apps" / "cli" / "src" / "bin.ts"

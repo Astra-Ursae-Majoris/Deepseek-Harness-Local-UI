@@ -155,23 +155,34 @@ npm install -g pnpm
 pnpm --version   # 应输出 9.x 或更高
 ```
 
-#### 0.3 安装 DSH 源码依赖（只需一次，约 3-10 分钟）**必须完成，否则服务无法启动**
+#### 0.3 安装依赖并构建（只需一次，约 5-20 分钟）**必须完整执行，否则服务无法启动**
 
 ```powershell
 # 进入 harness 目录（DeepSeek Harness 官方源码修改版）
 cd harness
+
+# 1) 安装依赖
 pnpm install
+
+# 2) 构建前端与各包（官方标准流程，生成 Web GUI 所需资源）
+pnpm run build
+
 cd ..
 ```
 
-> ⚠️ **这一步决定成败**：服务启动需要 `harness/node_modules`（含 tsx 等依赖）。若 `pnpm install` 未成功，桌面应用会提示「harness 依赖未安装」。
-> 国内网络若安装缓慢或失败，可先设置镜像：`pnpm config set registry https://registry.npmmirror.com` 再重试。
+> ⚠️ **这两步决定成败**（官方流程为 `pnpm install` → `pnpm run build` → `pnpm dsh web`）：
+> - `pnpm install`：安装 node_modules（含 tsx 等运行时依赖）；
+> - `pnpm run build`：生成前端 bundle 与各包产物（`lib/client.js`、`apps/web/dist`），**缺了它 GUI 无法渲染**；
+> - 国内网络慢可先执行：`pnpm config set registry https://registry.npmmirror.com` 再重试。
 
-**验证依赖已装好**（应能看到 tsx 目录）：
+**验证依赖与构建产物就绪**（三项都应看到 True / 目录存在）：
 
 ```powershell
-Test-Path harness\node_modules\tsx   # 返回 True 说明依赖就绪
+Test-Path harness\node_modules\tsx    # 依赖：返回 True
+Test-Path harness\apps\web\dist      # 构建：返回 True
+Get-ChildItem harness\packages\client\ui-conversation\lib\client.js  # 前端 bundle 存在
 ```
+
 
 #### 0.4 配置 DeepSeek API 密钥
 
